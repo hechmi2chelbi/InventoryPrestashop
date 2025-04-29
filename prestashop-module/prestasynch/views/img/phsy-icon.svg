@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="57" height="57" viewBox="0 0 57 57">
+  <rect width="57" height="57" rx="8" fill="#1c64f2"/>
+  <text x="28.5" y="34" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#ffffff">PHSy</text>
+  <path d="M14,14 L43,14 L43,17 L14,17 Z" fill="#ffffff" />
+  <path d="M14,40 L43,40 L43,43 L14,43 Z" fill="#ffffff" />
+</svg>

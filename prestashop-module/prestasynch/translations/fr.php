@@ -1,0 +1,31 @@
+<?php
+
+global $_MODULE;
+$_MODULE = array();
+$_MODULE['<{prestasynch}prestashop>prestasynch_3f9b87832191fff1d2136c2c2d699e76'] = 'PHSy - Gestion avancée des produits et attributs';
+$_MODULE['<{prestasynch}prestashop>prestasynch_f4f70727dc34561dfde1a3c529b6205c'] = 'Paramètres';
+$_MODULE['<{prestasynch}prestashop>prestasynch_92b7dab5f31a05cd43ddcaa5c0af0fe2'] = 'Synchronisez vos produits, stocks et prix avec la plateforme PHSy pour une gestion optimisée de votre boutique';
+$_MODULE['<{prestasynch}prestashop>prestasynch_876f23178c29dc2552c0b48bf23cd9bd'] = 'Êtes-vous sûr de vouloir désinstaller?';
+$_MODULE['<{prestasynch}prestashop>prestasynch_cebd5bbe0ffdecc270a8a324e5a277dd'] = 'Mode Live';
+$_MODULE['<{prestasynch}prestashop>prestasynch_ea9df7a306e2f8b5af37b67084d0c984'] = 'Activer la synchronisation en temps réel';
+$_MODULE['<{prestasynch}prestashop>prestasynch_00d23a76e43b46dae9ec7aa9dcbebb32'] = 'Activé';
+$_MODULE['<{prestasynch}prestashop>prestasynch_b9f5c797ebbf55adccdd8539a65a0241'] = 'Désactivé';
+$_MODULE['<{prestasynch}prestashop>prestasynch_c9cc8cce247e49bae79f15173ce97354'] = 'Enregistrer';
+$_MODULE['<{prestasynch}prestashop>prestasynch_656a6828d7ef1bb791e42087c4b5ee6e'] = 'Clé API';
+$_MODULE['<{prestasynch}prestashop>prestasynch_4b9c9df5da8a9da0c79f58d1f3ff2e60'] = 'C\'est votre clé API unique pour vous connecter à la plateforme PHSy';
+$_MODULE['<{prestasynch}prestashop>prestasynch_9612dd43bb7cb9c3fe03af65a5f3d5a4'] = 'Aucune clé API n\'a encore été générée. Cliquez sur le bouton ci-dessous pour en générer une.';
+$_MODULE['<{prestasynch}prestashop>prestasynch_df91a492fd5e7a34e10cbe7983570a4c'] = 'Gestion de la clé API';
+$_MODULE['<{prestasynch}prestashop>prestasynch_e28a861d6fb82a08a7d4f81e8c948133'] = 'Attention: la génération d\'une nouvelle clé invalidera l\'ancienne';
+$_MODULE['<{prestasynch}prestashop>prestasynch_a88518d269d9a7763c574a1412675d5e'] = 'Générer une nouvelle clé API';
+$_MODULE['<{prestasynch}prestashop>prestasynch_c888438d14855d7d96a2724ee9c306bd'] = 'Paramètres mis à jour';
+$_MODULE['<{prestasynch}prestashop>prestasynch_e727b00b86f7324488cb9b26ab5f4545'] = 'Clé API générée avec succès.';
+$_MODULE['<{prestasynch}prestashop>configure_3f9b87832191fff1d2136c2c2d699e76'] = 'PHSy - Gestion avancée des produits et attributs';
+$_MODULE['<{prestasynch}prestashop>configure_9e3c34aedb1397e12ccb1214e3e4835a'] = 'Bienvenue dans le module PHSy!';
+$_MODULE['<{prestasynch}prestashop>configure_ce46a55fd55ca06fa5d1b2c240d161c2'] = 'Ce module vous permet de synchroniser vos produits, stocks et prix avec la plateforme PHSy.';
+$_MODULE['<{prestasynch}prestashop>configure_0d47a98f9e9e2e2f9b012159bb9470a2'] = 'Comment utiliser ce module';
+$_MODULE['<{prestasynch}prestashop>configure_cb6d5e16fd5d8655b0e29bec0b908c8e'] = 'Générez une clé API en utilisant le formulaire ci-dessous';
+$_MODULE['<{prestasynch}prestashop>configure_52c5c260e520028075d24f2dbad0fcfa'] = 'Copiez la clé API et collez-la dans votre tableau de bord PHSy';
+$_MODULE['<{prestasynch}prestashop>configure_b67b08e3102a19779db882a7e2a3c9d4'] = 'Activez le Mode Live pour démarrer la synchronisation automatique';
+$_MODULE['<{prestasynch}prestashop>configure_656a6828d7ef1bb791e42087c4b5ee6e'] = 'Votre clé API';
+$_MODULE['<{prestasynch}prestashop>configure_6fbb6fd4d71978a8f54a55236de30c51'] = 'Copier dans le presse-papier';
+$_MODULE['<{prestasynch}prestashop>configure_82eaa90fe28c28a9e958c666ad13be30'] = 'Gardez cette clé en sécurité! Elle donne accès aux données de votre boutique.';

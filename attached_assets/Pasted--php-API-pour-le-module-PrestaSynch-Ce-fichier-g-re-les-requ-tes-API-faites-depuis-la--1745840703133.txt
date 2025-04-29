@@ -1,0 +1,664 @@
+<?php
+/**
+ * API pour le module PrestaSynch
+ *
+ * Ce fichier gère les requêtes API faites depuis la plateforme PrestaSynch vers la boutique PrestaShop
+ * 
+ * @author    PrestaSynch Team
+ * @copyright 2024 PrestaSynch
+ * @license   https://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
+ */
+
+// Initialisation de PrestaShop
+include(dirname(__FILE__).'/../../config/config.inc.php');
+include(dirname(__FILE__).'/../../init.php');
+include(dirname(__FILE__).'/prestasynch.php');
+
+// L'authentification HTTP Basic a été supprimée pour simplifier l'intégration
+
+// Vérification de la méthode HTTP
+// Adaptation pour permettre les requêtes GET pour certaines actions
+$isGetAllowed = false;
+if (isset($_GET['action']) && in_array($_GET['action'], ['ping', 'stats', 'products', 'price_history'])) {
+    $isGetAllowed = true;
+}
+
+// Vérification de la méthode HTTP (sauf pour les actions qui supportent GET)
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && !$isGetAllowed) {
+    header('HTTP/1.1 405 Method Not Allowed');
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Méthode non autorisée. Utilisez POST.']);
+    exit;
+}
+
+// Récupération des données JSON (uniquement pour les POST)
+$requestData = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $inputData = file_get_contents('php://input');
+    if (!empty($inputData)) {
+        $requestData = json_decode($inputData, true);
+        if (!$requestData && $_SERVER['CONTENT_LENGTH'] > 0) {
+            header('HTTP/1.1 400 Bad Request');
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Format de données invalide. JSON attendu.']);
+            exit;
+        }
+    }
+}
+
+// Initialiser le module PrestaSynch
+$prestasynch = new Prestasynch();
+
+// Vérification de l'authentification par clé API
+$apiKey = null;
+
+// Extraire la clé API de l'en-tête ou des paramètres de la requête
+if (isset($_SERVER['HTTP_X_API_KEY'])) {
+    $apiKey = $_SERVER['HTTP_X_API_KEY'];
+} elseif (isset($_GET['api_key'])) {
+    $apiKey = $_GET['api_key'];
+}
+
+// Vérifier si la clé API est valide
+$configuredApiKey = Configuration::get('PRESTASYNCH_API_KEY');
+if (!$apiKey || $apiKey !== $configuredApiKey) {
+    // Journaliser la tentative d'accès avec une clé invalide
+    $prestasynch->logActivity('api', 'error', 'Tentative d\'accès avec une clé API invalide', [
+        'ip' => $_SERVER['REMOTE_ADDR'],
+        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
+        'provided_key' => substr($apiKey ?? '', 0, 8) . '...' // Ne pas journaliser la clé complète pour des raisons de sécurité
+    ]);
+    
+    header('HTTP/1.1 401 Unauthorized');
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Clé API invalide ou manquante.']);
+    exit;
+}
+
+// Journaliser l'accès réussi à l'API
+$prestasynch->logActivity('api', 'success', 'Accès API autorisé', [
+    'action' => isset($_GET['action']) ? $_GET['action'] : 'default',
+    'ip' => $_SERVER['REMOTE_ADDR']
+]);
+
+// Traitement de la requête en fonction de l'action demandée
+$action = isset($_GET['action']) ? $_GET['action'] : 'default';
+
+switch ($action) {
+    case 'get_products':
+    case 'products':
+        // Récupérer la liste des produits
+        $result = getProducts();
+        break;
+        
+    case 'get_product':
+        // Récupérer un produit spécifique
+        if (!isset($requestData['id_product'])) {
+            header('HTTP/1.1 400 Bad Request');
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'ID du produit manquant.']);
+            exit;
+        }
+        
+        $result = getProduct($requestData['id_product']);
+        break;
+        
+    case 'update_stock':
+        // Mettre à jour le stock d'un produit
+        if (!isset($requestData['id_product']) || !isset($requestData['quantity'])) {
+            header('HTTP/1.1 400 Bad Request');
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'ID du produit ou quantité manquants.']);
+            exit;
+        }
+        
+        $result = updateProductStock($requestData['id_product'], $requestData['quantity']);
+        break;
+        
+    case 'ping':
+        // Simple vérification de connectivité
+        $result = ['status' => 'ok', 'message' => 'PrestaSynch module is connected.', 'version' => '1.0.0'];
+        break;
+        
+    case 'stats':
+        // Récupération des statistiques générales de la boutique
+        $result = getShopStats();
+        break;
+    
+    case 'price_history':
+        // Récupération de l'historique des prix d'un produit
+        if (!isset($_GET['id_product']) && !isset($requestData['id_product'])) {
+            header('HTTP/1.1 400 Bad Request');
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'ID du produit manquant.']);
+            exit;
+        }
+        
+        // Récupérer l'ID du produit depuis GET ou POST
+        $productId = isset($_GET['id_product']) ? $_GET['id_product'] : $requestData['id_product'];
+        $result = getProductPriceHistory($productId);
+        break;
+        
+    default:
+        header('HTTP/1.1 400 Bad Request');
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Action non reconnue.']);
+        exit;
+}
+
+// Envoi de la réponse
+header('Content-Type: application/json');
+echo json_encode($result);
+exit;
+
+/**
+ * Récupération de tous les produits (actifs et non actifs) avec leurs attributs
+ *
+ * @return array
+ */
+function getProducts() {
+    global $prestasynch;
+    $context = Context::getContext();
+    $id_lang = $context->language->id;
+    
+    // Journaliser le début de l'action
+    $prestasynch->logActivity('api', 'info', 'Récupération de la liste des produits (incluant non actifs et attributs)', [
+        'action' => 'get_products',
+        'language_id' => $id_lang
+    ]);
+    
+    try {
+        // Récupérer tous les produits, y compris les inactifs
+        $sql = 'SELECT p.id_product FROM `'._DB_PREFIX_.'product` p
+                ORDER BY p.id_product ASC';
+        $db = Db::getInstance();
+        $productIds = $db->executeS($sql);
+        
+        $result = [];
+        
+        // Traiter chaque produit individuellement
+        foreach ($productIds as $productIdData) {
+            $id_product = $productIdData['id_product'];
+            $product = new Product($id_product, true, $id_lang);
+            
+            // Ajouter le produit principal
+            $productInfo = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'reference' => $product->reference,
+                'price' => $product->getPrice(),
+                'quantity' => StockAvailable::getQuantityAvailableByProduct($product->id),
+                'active' => (bool)$product->active
+            ];
+            
+            $result[] = $productInfo;
+            
+            // Récupérer les attributs (combinaisons) du produit
+            $attributes = $product->getAttributeCombinations($id_lang);
+            if (!empty($attributes)) {
+                foreach ($attributes as $attribute) {
+                    $id_product_attribute = $attribute['id_product_attribute'];
+                    
+                    // Éviter les doublons si plusieurs attributs pour la même combinaison
+                    if (!isset($processedAttributes[$id_product_attribute])) {
+                        $attributeName = $product->name;
+                        
+                        // Construire le nom de l'attribut en ajoutant les valeurs des attributs
+                        $attributeValues = [];
+                        foreach ($attributes as $attr) {
+                            if ($attr['id_product_attribute'] == $id_product_attribute) {
+                                $attributeValues[] = $attr['group_name'] . ': ' . $attr['attribute_name'];
+                            }
+                        }
+                        
+                        if (!empty($attributeValues)) {
+                            $attributeName .= ' (' . implode(', ', $attributeValues) . ')';
+                        }
+                        
+                        // Récupérer le prix et le stock pour cette combinaison
+                        $combinationPrice = $product->getPrice(true, $id_product_attribute);
+                        $combinationStock = StockAvailable::getQuantityAvailableByProduct($product->id, $id_product_attribute);
+                        
+                        $result[] = [
+                            'id' => $product->id,
+                            'id_product_attribute' => $id_product_attribute,
+                            'name' => $attributeName,
+                            'reference' => $attribute['reference'] ? $attribute['reference'] : $product->reference,
+                            'price' => $combinationPrice,
+                            'quantity' => $combinationStock,
+                            'is_attribute' => true,
+                            'active' => (bool)$product->active
+                        ];
+                        
+                        // Marquer cet attribut comme traité
+                        $processedAttributes[$id_product_attribute] = true;
+                    }
+                }
+            }
+        }
+        
+        // Journaliser le succès de l'action
+        $prestasynch->logActivity('api', 'success', 'Liste des produits et attributs récupérée avec succès', [
+            'action' => 'get_products',
+            'product_count' => count($result)
+        ]);
+        
+        return ['products' => $result];
+    } catch (Exception $e) {
+        // Journaliser l'erreur
+        $prestasynch->logActivity('api', 'error', 'Erreur lors de la récupération des produits et attributs', [
+            'action' => 'get_products',
+            'error' => $e->getMessage()
+        ]);
+        
+        return ['error' => 'Erreur lors de la récupération des produits et attributs: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Récupération d'un produit spécifique
+ *
+ * @param int $id_product
+ * @return array
+ */
+function getProduct($id_product) {
+    global $prestasynch;
+    $context = Context::getContext();
+    $id_lang = $context->language->id;
+    
+    // Journaliser le début de l'action
+    $prestasynch->logActivity('api', 'info', 'Récupération des données d\'un produit', [
+        'action' => 'get_product',
+        'product_id' => $id_product
+    ]);
+    
+    try {
+        $product = new Product($id_product, true, $id_lang);
+        
+        if (!Validate::isLoadedObject($product)) {
+            // Journaliser l'erreur
+            $prestasynch->logActivity('api', 'warning', 'Produit non trouvé', [
+                'action' => 'get_product',
+                'product_id' => $id_product
+            ]);
+            
+            return ['error' => 'Produit non trouvé.'];
+        }
+        
+        $result = [
+            'id' => $product->id,
+            'name' => $product->name,
+            'reference' => $product->reference,
+            'price' => $product->getPrice(),
+            'quantity' => StockAvailable::getQuantityAvailableByProduct($product->id),
+            'description' => $product->description,
+            'description_short' => $product->description_short,
+            'active' => (bool)$product->active,
+            'date_add' => $product->date_add,
+            'date_upd' => $product->date_upd
+        ];
+        
+        // Journaliser le succès de l'action
+        $prestasynch->logActivity('api', 'success', 'Données du produit récupérées avec succès', [
+            'action' => 'get_product',
+            'product_id' => $id_product,
+            'product_name' => $product->name
+        ]);
+        
+        return ['product' => $result];
+    } catch (Exception $e) {
+        // Journaliser l'erreur
+        $prestasynch->logActivity('api', 'error', 'Erreur lors de la récupération du produit', [
+            'action' => 'get_product',
+            'product_id' => $id_product,
+            'error' => $e->getMessage()
+        ]);
+        
+        return ['error' => 'Erreur lors de la récupération du produit: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Mise à jour du stock d'un produit
+ *
+ * @param int $id_product
+ * @param int $quantity
+ * @return array
+ */
+function updateProductStock($id_product, $quantity) {
+    global $prestasynch;
+    
+    // Journaliser le début de l'action
+    $prestasynch->logActivity('api', 'info', 'Mise à jour du stock d\'un produit', [
+        'action' => 'update_stock',
+        'product_id' => $id_product,
+        'requested_quantity' => $quantity
+    ]);
+    
+    try {
+        $product = new Product($id_product);
+        
+        if (!Validate::isLoadedObject($product)) {
+            // Journaliser l'erreur
+            $prestasynch->logActivity('api', 'warning', 'Produit non trouvé pour mise à jour du stock', [
+                'action' => 'update_stock',
+                'product_id' => $id_product
+            ]);
+            
+            return ['error' => 'Produit non trouvé.'];
+        }
+        
+        $id_product_attribute = 0; // Produit sans déclinaison
+        $shop = Context::getContext()->shop;
+        
+        // Récupérer la quantité actuelle avant la mise à jour
+        $currentQuantity = StockAvailable::getQuantityAvailableByProduct($id_product);
+        
+        // Mise à jour du stock
+        StockAvailable::setQuantity($id_product, $id_product_attribute, $quantity, $shop->id);
+        
+        // Journalisation de l'action
+        $prestasynch->logActivity('stock', 'success', 'Stock du produit mis à jour avec succès', [
+            'action' => 'update_stock',
+            'product_id' => $id_product,
+            'product_name' => $product->name,
+            'previous_quantity' => $currentQuantity,
+            'new_quantity' => $quantity,
+            'difference' => $quantity - $currentQuantity
+        ]);
+        
+        // Journalisation standard de PrestaShop
+        PrestaShopLogger::addLog('Stock updated by PrestaSynch - Product ID: ' . $id_product . ', New Quantity: ' . $quantity, 1);
+        
+        return [
+            'success' => true,
+            'message' => 'Stock mis à jour avec succès.',
+            'product_id' => $id_product,
+            'previous_quantity' => $currentQuantity,
+            'new_quantity' => $quantity
+        ];
+    } catch (Exception $e) {
+        // Journaliser l'erreur
+        $prestasynch->logActivity('api', 'error', 'Erreur lors de la mise à jour du stock', [
+            'action' => 'update_stock',
+            'product_id' => $id_product,
+            'requested_quantity' => $quantity,
+            'error' => $e->getMessage()
+        ]);
+        
+        return ['error' => 'Erreur lors de la mise à jour du stock: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Récupération des statistiques générales de la boutique
+ *
+ * @return array
+ */
+function getShopStats() {
+    global $prestasynch;
+    
+    // Journaliser le début de l'action
+    $prestasynch->logActivity('api', 'info', 'Récupération des statistiques générales', [
+        'action' => 'stats'
+    ]);
+    
+    try {
+        $db = Db::getInstance();
+        
+        // Nombre total de clients
+        $totalCustomers = Customer::getCustomers(true);
+        $totalCustomersCount = count($totalCustomers);
+        
+        // Nombre total de commandes
+        $orderCountQuery = 'SELECT COUNT(*) FROM `'._DB_PREFIX_.'orders` WHERE `valid` = 1';
+        $totalOrders = (int)$db->getValue($orderCountQuery);
+        
+        // Chiffre d'affaires total (commandes validées)
+        $revenueQuery = 'SELECT SUM(total_paid_tax_incl) FROM `'._DB_PREFIX_.'orders` WHERE `valid` = 1';
+        $totalRevenue = $db->getValue($revenueQuery);
+        if (!$totalRevenue) {
+            $totalRevenue = "0";
+        }
+        
+        // Nombre total de produits (actifs et inactifs)
+        $productCountQuery = 'SELECT COUNT(*) FROM `'._DB_PREFIX_.'product`';
+        $totalProducts = (int)$db->getValue($productCountQuery);
+        
+        // Nombre total de catégories
+        $categoryCountQuery = 'SELECT COUNT(*) FROM `'._DB_PREFIX_.'category` WHERE `active` = 1';
+        $totalCategories = (int)$db->getValue($categoryCountQuery);
+        
+        $stats = [
+            'total_customers' => $totalCustomersCount,
+            'total_orders' => $totalOrders,
+            'total_revenue' => number_format((float)$totalRevenue, 2, '.', ''),
+            'total_products' => $totalProducts,
+            'total_categories' => $totalCategories
+        ];
+        
+        // Journaliser le succès de l'action
+        $prestasynch->logActivity('api', 'success', 'Statistiques générales récupérées avec succès', [
+            'action' => 'stats',
+            'customer_count' => $totalCustomersCount,
+            'order_count' => $totalOrders
+        ]);
+        
+        return ['stats' => $stats];
+    } catch (Exception $e) {
+        // Journaliser l'erreur
+        $prestasynch->logActivity('api', 'error', 'Erreur lors de la récupération des statistiques', [
+            'action' => 'stats',
+            'error' => $e->getMessage()
+        ]);
+        
+        return ['error' => 'Erreur lors de la récupération des statistiques: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Récupération de l'historique des prix d'un produit
+ *
+ * @param int $id_product
+ * @return array
+ */
+function getProductPriceHistory($id_product) {
+    global $prestasynch;
+    
+    // Journaliser le début de l'action
+    $prestasynch->logActivity('api', 'info', 'Récupération de l\'historique des prix d\'un produit', [
+        'action' => 'price_history',
+        'product_id' => $id_product
+    ]);
+    
+    try {
+        $db = Db::getInstance();
+        $context = Context::getContext();
+        $id_lang = $context->language->id;
+        
+        // Vérifier que le produit existe
+        $product = new Product($id_product, true, $id_lang);
+        
+        if (!Validate::isLoadedObject($product)) {
+            $prestasynch->logActivity('api', 'warning', 'Produit non trouvé pour l\'historique des prix', [
+                'action' => 'price_history',
+                'product_id' => $id_product
+            ]);
+            
+            return ['error' => 'Produit non trouvé.'];
+        }
+        
+        // Récupérer le prix actuel
+        $currentPrice = $product->getPrice();
+        
+        // Récupérer l'historique des prix spécifiques
+        $specificPriceQuery = '
+            SELECT sp.id_specific_price, sp.price, sp.reduction, sp.reduction_type, sp.from_quantity, 
+                   sp.from, sp.to, sp.date_add
+            FROM `'._DB_PREFIX_.'specific_price` sp
+            WHERE sp.id_product = '.(int)$id_product.'
+            ORDER BY sp.date_add DESC';
+        
+        $specificPrices = $db->executeS($specificPriceQuery);
+        
+        // Récupérer l'historique des prix à partir des commandes passées
+        $orderPriceQuery = '
+            SELECT od.product_price as price, o.date_add
+            FROM `'._DB_PREFIX_.'order_detail` od
+            JOIN `'._DB_PREFIX_.'orders` o ON o.id_order = od.id_order
+            WHERE od.product_id = '.(int)$id_product.' AND o.valid = 1
+            ORDER BY o.date_add DESC
+            LIMIT 50';
+        
+        $orderPrices = $db->executeS($orderPriceQuery);
+        
+        // Formater les résultats
+        $history = [
+            'current' => [
+                'price' => $currentPrice,
+                'date' => date('Y-m-d H:i:s')
+            ],
+            'specific_prices' => [],
+            'order_prices' => []
+        ];
+        
+        // Formater les prix spécifiques
+        if ($specificPrices && is_array($specificPrices)) {
+            foreach ($specificPrices as $sp) {
+                $price = $sp['price'];
+                
+                // Si le prix est -1, cela signifie que le prix de base est utilisé avec une réduction
+                if ($price == -1) {
+                    if ($sp['reduction_type'] == 'percentage') {
+                        $finalPrice = $currentPrice * (1 - $sp['reduction']);
+                    } else {
+                        $finalPrice = $currentPrice - $sp['reduction'];
+                    }
+                } else {
+                    $finalPrice = $price;
+                }
+                
+                $history['specific_prices'][] = [
+                    'price' => $finalPrice,
+                    'original_price' => $currentPrice,
+                    'reduction' => $sp['reduction'],
+                    'reduction_type' => $sp['reduction_type'],
+                    'from_quantity' => $sp['from_quantity'],
+                    'from' => $sp['from'],
+                    'to' => $sp['to'],
+                    'date_added' => $sp['date_add']
+                ];
+            }
+        }
+        
+        // Formater les prix des commandes
+        if ($orderPrices && is_array($orderPrices)) {
+            foreach ($orderPrices as $op) {
+                $history['order_prices'][] = [
+                    'price' => $op['price'],
+                    'date' => $op['date_add']
+                ];
+            }
+        }
+        
+        // Calculer les variations de prix
+        $priceChanges = [];
+        $lastPrice = null;
+        
+        // Extraire tous les prix dans l'ordre chronologique
+        $allPrices = [];
+        
+        // Ajouter les prix des commandes
+        foreach ($history['order_prices'] as $op) {
+            $allPrices[] = [
+                'price' => $op['price'],
+                'date' => $op['date'],
+                'type' => 'order'
+            ];
+        }
+        
+        // Ajouter les prix spécifiques
+        foreach ($history['specific_prices'] as $sp) {
+            $allPrices[] = [
+                'price' => $sp['price'],
+                'date' => $sp['date_added'],
+                'type' => 'specific'
+            ];
+        }
+        
+        // Trier par date (du plus ancien au plus récent)
+        usort($allPrices, function($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+        
+        // Calculer les variations
+        foreach ($allPrices as $price) {
+            if ($lastPrice !== null && $price['price'] != $lastPrice) {
+                $change = $price['price'] - $lastPrice;
+                $percentChange = ($lastPrice > 0) ? ($change / $lastPrice) * 100 : 0;
+                
+                $priceChanges[] = [
+                    'old_price' => $lastPrice,
+                    'new_price' => $price['price'],
+                    'change' => $change,
+                    'percent_change' => $percentChange,
+                    'date' => $price['date'],
+                    'type' => $price['type']
+                ];
+            }
+            
+            $lastPrice = $price['price'];
+        }
+        
+        // Ajouter le prix actuel
+        if ($lastPrice !== null && $currentPrice != $lastPrice) {
+            $change = $currentPrice - $lastPrice;
+            $percentChange = ($lastPrice > 0) ? ($change / $lastPrice) * 100 : 0;
+            
+            $priceChanges[] = [
+                'old_price' => $lastPrice,
+                'new_price' => $currentPrice,
+                'change' => $change,
+                'percent_change' => $percentChange,
+                'date' => date('Y-m-d H:i:s'),
+                'type' => 'current'
+            ];
+        }
+        
+        $history['price_changes'] = $priceChanges;
+        
+        // Ajouter des données de base sur le produit
+        $productInfo = [
+            'id' => $product->id,
+            'name' => $product->name,
+            'reference' => $product->reference,
+            'current_price' => $currentPrice,
+            'date_add' => $product->date_add,
+            'date_upd' => $product->date_upd
+        ];
+        
+        // Journaliser le succès de l'action
+        $prestasynch->logActivity('api', 'success', 'Historique des prix récupéré avec succès', [
+            'action' => 'price_history',
+            'product_id' => $id_product,
+            'product_name' => $product->name,
+            'specific_prices_count' => count($history['specific_prices']),
+            'order_prices_count' => count($history['order_prices']),
+            'price_changes_count' => count($history['price_changes'])
+        ]);
+        
+        return [
+            'product' => $productInfo,
+            'history' => $history
+        ];
+    } catch (Exception $e) {
+        // Journaliser l'erreur
+        $prestasynch->logActivity('api', 'error', 'Erreur lors de la récupération de l\'historique des prix', [
+            'action' => 'price_history',
+            'product_id' => $id_product,
+            'error' => $e->getMessage()
+        ]);
+        
+        return ['error' => 'Erreur lors de la récupération de l\'historique des prix: ' . $e->getMessage()];
+    }
+}

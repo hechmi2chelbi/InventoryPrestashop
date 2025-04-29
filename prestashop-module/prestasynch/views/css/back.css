@@ -1,0 +1,315 @@
+/**
+ * Styles pour le back-office du module PHSy
+ */
+
+/* En-tête du module */
+.panel-phsy-header {
+  background: linear-gradient(135deg, #3C9EE5 0%, #2E7ECF 100%);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.panel-phsy-header h2 {
+  margin-top: 0;
+  font-weight: 600;
+}
+
+/* Icône du module */
+.module-phsy-icon {
+  font-size: 24px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+/* Navigation par onglets */
+.phsy-tabs {
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.phsy-tabs .list-group-item {
+  border-radius: 0;
+  border-left: 5px solid transparent;
+  padding: 15px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  margin-bottom: 5px;
+}
+
+.phsy-tabs .list-group-item.active,
+.phsy-tabs .list-group-item:hover {
+  background-color: #f5f9ff;
+  border-left: 5px solid #25b9d7;
+  color: #25b9d7;
+  transform: translateX(3px);
+}
+
+.phsy-tabs .list-group-item:first-child {
+  background-color: #f2f9ff;
+  border-left: 5px solid #25b9d7;
+}
+
+.phsy-tabs .list-group-item i {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  font-size: 18px;
+}
+
+/* Contenu des onglets */
+.tab-content {
+  max-width: 50%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.tab-content > .tab-pane {
+  padding: 0;
+}
+
+.tab-content .panel-heading {
+  background-color: #f5f5f5;
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.tab-content .panel-body {
+  padding: 20px;
+}
+
+/* Mise en forme des panneaux de test */
+.logs-container {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Coloration des logs par niveau */
+.log-info {
+  color: #0275d8;
+}
+
+.log-success {
+  color: #5cb85c;
+}
+
+.log-warning {
+  color: #f0ad4e;
+}
+
+.log-error {
+  color: #d9534f;
+}
+
+/* Mise en forme des tableaux */
+.table-phsy {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-phsy th, .table-phsy td {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+.table-phsy th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+  text-align: left;
+}
+
+.table-phsy tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table-phsy tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Boutons */
+.btn-phsy {
+  background-color: #3C9EE5;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-phsy:hover {
+  background-color: #2E7ECF;
+}
+
+.btn-phsy-danger {
+  background-color: #d9534f;
+}
+
+.btn-phsy-danger:hover {
+  background-color: #c9302c;
+}
+
+/* Indicateurs de statut */
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.status-success {
+  background-color: #5cb85c;
+}
+
+.status-warning {
+  background-color: #f0ad4e;
+}
+
+.status-error {
+  background-color: #d9534f;
+}
+
+/* Tooltips */
+.tooltip-phsy {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip-phsy .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip-phsy:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Formulaires */
+.form-horizontal .control-label {
+  text-align: right;
+  font-weight: 600;
+}
+
+.form-horizontal .form-group {
+  margin-bottom: 15px;
+}
+
+.input-group-addon {
+  background-color: #f5f5f5;
+}
+
+/* Style spécifique pour le champ de clé API */
+input[name="PRESTASYNCH_API_KEY"] {
+  font-size: 16px;
+  height: 45px;
+  border: 2px solid #3C9EE5;
+  box-shadow: 0 0 5px rgba(60, 158, 229, 0.3);
+}
+
+/* Style spécifique pour le bouton d'enregistrement de la clé API */
+button[name="submitprestasynch"] {
+  font-size: 16px;
+  height: 45px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #3C9EE5 0%, #2E7ECF 100%);
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+}
+
+button[name="submitprestasynch"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 8px rgba(0,0,0,0.2);
+}
+
+/* Onglet API Endpoints */
+pre {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0;
+}
+
+pre .string { color: #2F6F9F; }
+pre .number { color: #0086B3; }
+pre .boolean { color: #0086B3; }
+pre .null { color: #0086B3; }
+pre .key { color: #183691; font-weight: bold; }
+
+/* Onglet Logs */
+.log-timestamp {
+  color: #666;
+  font-weight: bold;
+}
+
+.log-category {
+  color: #5b9bd5;
+  font-weight: bold;
+}
+
+.log-level {
+  font-weight: bold;
+}
+
+.log-filters {
+  margin-bottom: 0;
+}
+
+.log-filters .input-group {
+  width: 200px;
+}
+
+/* Badges & Étiquettes */
+.badge {
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.badge-success {
+  background-color: #5cb85c;
+}
+
+.badge-warning {
+  background-color: #f0ad4e;
+}
+
+.badge-danger {
+  background-color: #d9534f;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .form-horizontal .control-label {
+    text-align: left;
+  }
+}
