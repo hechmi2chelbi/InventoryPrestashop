@@ -8,7 +8,7 @@ import {
   siteStats, type SiteStats, type InsertSiteStats
 } from "@shared/schema";
 import mysql from 'mysql2/promise';
-import { drizzle } from 'drizzle-orm/mysql';
+import { drizzle } from 'drizzle-orm/mysql2';
 import { eq, desc, like, sql, and, gt, gte, lt, lte, or, not, SQL, inArray } from 'drizzle-orm';
 import session from "express-session";
 
