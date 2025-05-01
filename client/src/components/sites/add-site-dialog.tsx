@@ -21,6 +21,7 @@ interface AddSiteDialogProps {
 
 // Liste des versions PrestaShop disponibles
 const PRESTASHOP_VERSIONS = [
+  { value: "1.7.8.11", label: "PrestaShop 1.7.8.11" },
   { value: "1.7.8.9", label: "PrestaShop 1.7.8.9" },
   { value: "1.7.8.8", label: "PrestaShop 1.7.8.8" },
   { value: "1.7.8.7", label: "PrestaShop 1.7.8.7" },

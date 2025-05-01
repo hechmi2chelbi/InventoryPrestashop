@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: filters.limit || products.length
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to get products" });
+      res.status(500).json({ message: `Failed to get products ${error}` });
     }
   });
 

@@ -102,8 +102,9 @@ export class PrestaShopSyncService {
 
     // Ajouter l'en-tête d'authentification Basic si activé
     if (site.http_auth_enabled && site.http_auth_username && site.http_auth_password) {
-      const auth = Buffer.from(`${site.http_auth_username}:${site.http_auth_password}`).toString('base64');
-      headers['Authorization'] = `Basic ${auth}`;
+     // const auth = Buffer.from(`${}:${}`).toString('base64');
+      const encodedCredentials = btoa(`kubii-preprod:7eBG187bi86WNGz7`);
+      headers['Authorization'] = `Basic ${encodedCredentials}`;
     }
 
     // Ajouter la clé API dans les en-têtes
@@ -121,13 +122,13 @@ export class PrestaShopSyncService {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
-        agent: url.startsWith('https:') ? httpsAgent : undefined,
+        agent: url.startsWith('https:') ? httpsAgent : httpsAgent,
       });
 
       if (!response.ok) {
         // Récupérer le texte de l'erreur si possible
         const errorText = await response.text();
-        throw new Error(`PrestaShop API request failed with status ${response.status}: ${errorText}`);
+        throw new Error(`PrestaShop API request failed with status  ${JSON.stringify(headers)} ${httpsAgent} ${body} ${response.status}: ${errorText}`);
       }
 
       return await response.json();

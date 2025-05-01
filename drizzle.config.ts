@@ -8,11 +8,11 @@ if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_PAS
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
-  dialect: "mysql2",
+  dialect: "mysql",
   dbCredentials: {
-    host: process.env.MYSQL_HOST,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE,
+    host: "127.0.0.1",
+  user: "prestasynch",
+  password: "1DhbQ[XdK2_6Jzr0",
+  database: "prestasynch",
   },
 });
